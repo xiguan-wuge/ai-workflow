@@ -1,0 +1,17 @@
+{
+  "name": "ai-workflow",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "build": "pnpm -r run build",
+    "build:components": "pnpm --filter @ai-workflow/components build",
+    "build:docs": "pnpm --filter @ai-workflow/docs build",
+    "release": "tsx scripts/release.ts",
+    "changelog": "tsx scripts/release.ts --changelog"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0"
+  }
+}
