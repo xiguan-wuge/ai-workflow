@@ -21,10 +21,10 @@ jobs:
 
             const labels = [];
 
-            if (/bug|broken|error|fail|not working|doesn't work|incorrect/i.test(text)) {
+            if (/bug|fix|broken|error|fail|not working|doesn't work|incorrect/i.test(text)) {
               labels.push('bug');
             }
-            if (/feature|enhancement|request|would like|wish|suggest/i.test(text)) {
+            if (/feat|feature|enhancement|request|would like|wish|suggest/i.test(text)) {
               labels.push('enhancement');
             }
             if (/docs|documentation|typo|readme|doc /i.test(text)) {
