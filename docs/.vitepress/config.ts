@@ -3,7 +3,7 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: 'AI Workflow',
   description: 'Vue 3 Component Library Documentation',
-  base: '/',
+  base: '/ai-workflow/',
   themeConfig: {
     nav: [
       { text: 'Home', link: '/' },
