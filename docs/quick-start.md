@@ -23,4 +23,4 @@ import { Calculator, HelloWorld } from '@ai-workflow/components'
 
 ## Playground
 
-在 [Playground](/playground) 中体验组件。
+在 Playground 中体验组件（详见 `playground/` 目录）。
