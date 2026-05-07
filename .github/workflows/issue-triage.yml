@@ -1,0 +1,66 @@
+name: Issue Triage
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const title = issue.title.toLowerCase();
+            const body = (issue.body || '').toLowerCase();
+            const text = title + ' ' + body;
+
+            const labels = [];
+
+            if (/bug|broken|error|fail|not working|doesn't work|incorrect/i.test(text)) {
+              labels.push('bug');
+            }
+            if (/feature|enhancement|request|would like|wish|suggest/i.test(text)) {
+              labels.push('enhancement');
+            }
+            if (/docs|documentation|typo|readme|doc /i.test(text)) {
+              labels.push('documentation');
+            }
+            if (/question|how do i|how to|help/i.test(text)) {
+              labels.push('question');
+            }
+
+            if (labels.length === 0) {
+              labels.push('needs-triage');
+            }
+
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              labels: labels
+            });
+
+            const welcome = `Thanks for opening this issue, @${issue.user.login}!
+
+            I've automatically applied the following labels: ${labels.map(l => '`' + l + '`').join(', ')}
+
+            For bugs, please make sure to include:
+            - Steps to reproduce
+            - Expected vs actual behavior
+            - Package version
+
+            For feature requests, please describe the use case and any alternatives you've considered.
+
+            Our documentation is available at https://xiguan-wuge.github.io/ai-workflow/`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: welcome
+            });
