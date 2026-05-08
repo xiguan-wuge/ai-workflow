@@ -26,6 +26,7 @@ When a Claude Code session starts for this repo, register these cron jobs:
 | check-ci-failures | `*/30 * * * *` | Scan PRs with `ci-failed` label, attempt auto-fix |
 | triage-new-issues | `0 */2 * * *` | Scan issues with `needs-triage` label, classify and respond |
 | respond-to-issues | `0 */6 * * *` | Check for unanswered issues needing AI response |
+| analyze-enhancements | `3,33 * * * *` | Scan issues with `enhancement` label, analyze requirements and comment |
 | health-check | `57 8 * * *` | Daily summary: open PRs, issues, stale items |
 
 ## CI Failure Auto-Fix Protocol
@@ -55,6 +56,38 @@ Response template for bugs:
 
 Response template for features:
 "Thanks for the suggestion! A few questions to help us scope this: [tailored follow-up questions]"
+
+## Enhancement Analysis Protocol
+
+Automatically analyze enhancement issues and provide structured feedback. Read-only: no code changes.
+
+1. List open issues with label `enhancement`, excluding those with labels `analyzed`, `needs-clarification`, or `in-progress`
+2. For each issue:
+   a. Read the full issue content (title + body) using `mcp__plugin_everything-claude-code_github__get_issue`
+   b. Assess completeness across these dimensions:
+      - Is the feature goal clearly stated?
+      - Are affected files/packages identifiable?
+      - Are acceptance criteria defined?
+      - Is critical info missing (API signatures, edge cases, use cases)?
+   c. If sufficient info → post an analysis comment and add label `analyzed`:
+      ```
+      ## Enhancement Analysis
+      **Summary:** [one-sentence understanding of the request]
+      **Scope:** [small / medium / large]
+      **Affected files:** [list]
+      **Suggested approach:**
+      1. [step]
+      2. [step]
+      **Next:** Once confirmed, a developer can pick this up.
+      ```
+   d. If insufficient info → post clarifying questions and add label `needs-clarification`:
+      ```
+      ## Clarification Needed
+      Before this can be implemented, please clarify:
+      1. [specific question]
+      2. [specific question]
+      ```
+3. Each issue is analyzed only once (guarded by `analyzed`/`needs-clarification` labels)
 
 ## Source Code Layout
 
