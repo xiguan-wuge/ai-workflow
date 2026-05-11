@@ -21,7 +21,8 @@ export default defineConfig({
         text: 'Components',
         items: [
           { text: 'Calculator', link: '/components/calculator' },
-          { text: 'HelloWorld', link: '/components/helloworld' }
+          { text: 'HelloWorld', link: '/components/helloworld' },
+          { text: 'NoData', link: '/components/nodata' }
         ]
       }
     ]

@@ -1,5 +1,18 @@
 {
  "env": {
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
+  "mcpServers": {
+    "openspec": {
+      "command": "npx",
+      "args": ["-y", "@fission-ai/openspec-mcp"]
+    }
+  },
+  "permissions": {
+    "allow": [
+      "Bash:openspec:*",
+      "Bash:npm:*",
+      "Bash:git:*"
+    ]
   }
 }
