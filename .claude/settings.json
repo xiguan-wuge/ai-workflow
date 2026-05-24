@@ -21,6 +21,11 @@
       "Bash:openspec:*",
       "Bash:npm:*",
       "Bash:git:*"
+    ],
+    "deny": [
+      "Bash:rm -rf *",
+      "Bash:sudo *",
+      "Bash:curl * | bash"
     ]
   }
 }

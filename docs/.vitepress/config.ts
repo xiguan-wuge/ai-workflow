@@ -1,9 +1,25 @@
 import { defineConfig } from 'vitepress'
+import demoPlugin from './plugins/demo'
+import { fileURLToPath, URL } from 'node:url'
 
 export default defineConfig({
   title: 'AI Workflow',
   description: 'Vue 3 Component Library Documentation',
   base: '/ai-workflow/',
+  markdown: {
+    config(md) {
+      demoPlugin(md)
+    }
+  },
+  vite: {
+    resolve: {
+      alias: {
+        '@ai-workflow/components': fileURLToPath(
+          new URL('../../packages/components/src/index.ts', import.meta.url)
+        )
+      }
+    }
+  },
   themeConfig: {
     nav: [
       { text: 'Home', link: '/' },
@@ -26,5 +42,8 @@ export default defineConfig({
         ]
       }
     ]
+  },
+  vue: {
+    runtimeCompiler: true
   }
 })
