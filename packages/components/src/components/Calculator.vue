@@ -63,7 +63,7 @@ const calculate = (): number => {
       result = firstOperand.value! * secondOperand
       break
     case '/':
-      result = secondOperand !== 0 ? firstOperand.value! / secondOperand : 0
+      result = firstOperand.value! / secondOperand
       break
     default:
       return secondOperand
