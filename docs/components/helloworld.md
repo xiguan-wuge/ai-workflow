@@ -4,15 +4,9 @@
 
 ## 示例
 
-```vue
-<template>
-  <HelloWorld msg="你好！" />
-</template>
-
-<script setup>
-import { HelloWorld } from '@ai-workflow/components'
-</script>
-```
+:::demo 自定义消息
+helloworld/basic
+:::
 
 ## Props
 

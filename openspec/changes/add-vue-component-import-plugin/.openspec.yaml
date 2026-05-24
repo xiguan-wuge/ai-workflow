@@ -1,0 +1,24 @@
+schema: spec-driven
+name: add-vue-component-import-plugin
+status: completed
+created: 2026-05-12
+
+artifacts:
+  - id: proposal
+    type: proposal
+    status: done
+    path: proposal.md
+  - id: design
+    type: design
+    status: done
+    path: design.md
+    dependencies: [proposal]
+  - id: tasks
+    type: tasks
+    status: done
+    path: tasks.md
+    dependencies: [proposal, design]
+
+apply:
+  requires: [tasks]
+  ready: true

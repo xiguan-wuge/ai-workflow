@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitepress'
+import mdContainer from 'markdown-it-container'
 import demoPlugin from './plugins/demo'
 import { fileURLToPath, URL } from 'node:url'
 
@@ -8,7 +9,7 @@ export default defineConfig({
   base: '/ai-workflow/',
   markdown: {
     config(md) {
-      demoPlugin(md)
+      md.use(mdContainer, 'demo', demoPlugin(md))
     }
   },
   vite: {

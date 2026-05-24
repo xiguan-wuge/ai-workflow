@@ -4,15 +4,9 @@
 
 ## 示例
 
-```vue
-<template>
-  <Calculator />
-</template>
-
-<script setup>
-import { Calculator } from '@ai-workflow/components'
-</script>
-```
+:::demo
+calculator/basic
+:::
 
 ## 功能
 
