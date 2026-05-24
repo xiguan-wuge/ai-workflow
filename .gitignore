@@ -23,6 +23,10 @@ dist-ssr
 *.sln
 *.sw?
 
+# Claude Code / Codex agents
+.agents/
+.codex/
+
 # VitePress
 docs/.vitepress/cache
 docs/.vitepress/dist
