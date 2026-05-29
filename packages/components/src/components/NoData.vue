@@ -5,11 +5,7 @@ interface Props {
   icon?: string
 }
 
-const props = withDefaults(defineProps<Props>(), {
-  text: 'No Data',
-  description: '',
-  icon: '📭'
-})
+const { text = 'No Data', description = '', icon = '📭' } = defineProps<Props>()
 </script>
 
 <template>
