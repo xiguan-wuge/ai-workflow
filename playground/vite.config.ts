@@ -5,6 +5,9 @@ import { resolve } from 'path'
 
 export default defineConfig({
   plugins: [vue(), vueJsx()],
+  optimizeDeps: {
+    exclude: ['@vue/repl'],
+  },
   resolve: {
     conditions: ['source'],
     alias: {
