@@ -1,190 +1,347 @@
 #!/usr/bin/env tsx
-/**
- * Release Script for AI Workflow Monorepo
- *
- * This script generates changelogs and manages version bumps for packages.
- *
- * Usage:
- *   pnpm changelog    - Generate changelogs only
- *   pnpm release      - Generate changelogs and bump versions
- */
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs'
-import { join, dirname } from 'path'
+import { execFileSync } from 'child_process'
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'fs'
+import { dirname, join, relative } from 'path'
 import { fileURLToPath } from 'url'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const rootDir = join(__dirname, '..')
+type BumpType = 'major' | 'minor' | 'patch' | 'none'
+type ChangeGroup = 'breaking' | 'features' | 'fixes' | 'performance' | 'other'
 
-interface PackageInfo {
+interface WorkspacePackage {
   name: string
+  shortName: string
   version: string
   path: string
+  packageJsonPath: string
+  changelogPath: string
+  tagPrefix: string
+}
+
+interface CommitInfo {
+  hash: string
+  shortHash: string
+  subject: string
+  body: string
+  files: string[]
 }
 
 interface ChangelogEntry {
-  type: 'major' | 'minor' | 'patch'
-  scope: string
+  group: ChangeGroup
+  bump: BumpType
   message: string
+  scope: string
   commit: string
 }
 
-const PACKAGES = [
-  { name: '@ai-workflow/components', path: 'packages/components' },
-  { name: '@ai-workflow/utils', path: 'packages/utils' }
-]
+interface PackageRelease {
+  name: string
+  path: string
+  currentVersion: string
+  nextVersion: string
+  tag: string
+  previousTag: string | null
+  bump: BumpType
+  entries: ChangelogEntry[]
+}
 
-function getPackageInfo(packagePath: string): PackageInfo | null {
-  const pkgPath = join(rootDir, packagePath, 'package.json')
-  if (!existsSync(pkgPath)) {
+const rootDir = join(dirname(fileURLToPath(import.meta.url)), '..')
+const manifestPath = join(rootDir, '.release-manifest.json')
+
+const args = process.argv.slice(2)
+const options = {
+  changelogOnly: args.includes('--changelog'),
+  dryRun: args.includes('--dry-run'),
+  ci: args.includes('--ci'),
+  from: getArgValue('--from'),
+  packageName: getArgValue('--package')
+}
+
+function getArgValue(name: string): string | undefined {
+  const index = args.indexOf(name)
+  if (index === -1) return undefined
+  return args[index + 1]
+}
+
+function git(commandArgs: string[]): string {
+  return execFileSync('git', commandArgs, {
+    cwd: rootDir,
+    encoding: 'utf-8',
+    stdio: ['ignore', 'pipe', 'pipe']
+  }).trim()
+}
+
+function readJson<T>(filePath: string): T {
+  return JSON.parse(readFileSync(filePath, 'utf-8')) as T
+}
+
+function writeJson(filePath: string, value: unknown): void {
+  writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`)
+}
+
+function readWorkspacePatterns(): string[] {
+  const workspacePath = join(rootDir, 'pnpm-workspace.yaml')
+  if (!existsSync(workspacePath)) return ['packages/*']
+
+  return readFileSync(workspacePath, 'utf-8')
+    .split('\n')
+    .map(line => line.match(/^\s*-\s*['"]?([^'"]+)['"]?\s*$/)?.[1])
+    .filter((pattern): pattern is string => Boolean(pattern))
+}
+
+function resolveWorkspaceDirs(pattern: string): string[] {
+  if (!pattern.includes('*')) {
+    return existsSync(join(rootDir, pattern, 'package.json')) ? [pattern] : []
+  }
+
+  const [prefix, suffix = ''] = pattern.split('*')
+  const baseDir = join(rootDir, prefix)
+  if (!existsSync(baseDir)) return []
+
+  return readdirSync(baseDir, { withFileTypes: true })
+    .filter(entry => entry.isDirectory())
+    .map(entry => `${prefix}${entry.name}${suffix}`)
+    .filter(packagePath => existsSync(join(rootDir, packagePath, 'package.json')))
+}
+
+function discoverPackages(): WorkspacePackage[] {
+  const paths = [...new Set(readWorkspacePatterns().flatMap(resolveWorkspaceDirs))]
+  const packages = paths
+    .map(packagePath => {
+      const packageJsonPath = join(rootDir, packagePath, 'package.json')
+      const packageJson = readJson<{ name?: string; version?: string; private?: boolean }>(packageJsonPath)
+      if (!packageJson.name || !packageJson.version || packageJson.private) return null
+
+      const shortName = packageJson.name.includes('/')
+        ? packageJson.name.split('/').at(-1)!
+        : packageJson.name
+
+      return {
+        name: packageJson.name,
+        shortName,
+        version: packageJson.version,
+        path: packagePath,
+        packageJsonPath,
+        changelogPath: join(rootDir, packagePath, 'CHANGELOG.md'),
+        tagPrefix: `${shortName}-v`
+      }
+    })
+    .filter((pkg): pkg is WorkspacePackage => Boolean(pkg))
+
+  return options.packageName
+    ? packages.filter(pkg => pkg.name === options.packageName || pkg.shortName === options.packageName)
+    : packages
+}
+
+function latestTagFor(pkg: WorkspacePackage): string | null {
+  if (options.from) return options.from
+
+  try {
+    const tags = git(['tag', '--list', `${pkg.tagPrefix}*`, '--sort=-v:refname'])
+    return tags.split('\n').find(Boolean) ?? null
+  } catch {
     return null
   }
-  const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'))
-  return {
-    name: pkg.name,
-    version: pkg.version,
-    path: packagePath
-  }
 }
 
-function parseCommits(since: string = 'v0.0.0'): ChangelogEntry[] {
-  // Simulated commit parsing - in real implementation,
-  // this would use git log or conventional commits parser
-  // For now, return empty array as we don't have git history
-  return []
-}
+function commitsSince(tag: string | null): CommitInfo[] {
+  const range = tag ? `${tag}..HEAD` : 'HEAD'
+  let output = ''
 
-function determineBumpType(entries: ChangelogEntry[]): 'major' | 'minor' | 'patch' {
-  let hasMajor = false
-  let hasMinor = false
-
-  for (const entry of entries) {
-    if (entry.type === 'major') hasMajor = true
-    if (entry.type === 'minor' || entry.type === 'major') hasMinor = true
+  try {
+    output = git(['log', '--format=%H%x1f%s%x1f%b%x1e', range])
+  } catch {
+    return []
   }
 
-  if (hasMajor) return 'major'
-  if (hasMinor) return 'minor'
-  return 'patch'
+  return output
+    .split('\x1e')
+    .map(record => record.trim())
+    .filter(Boolean)
+    .map(record => {
+      const [hash, subject, body = ''] = record.split('\x1f')
+      return {
+        hash,
+        shortHash: hash.slice(0, 7),
+        subject,
+        body,
+        files: filesForCommit(hash)
+      }
+    })
+    .filter(commit => !commit.subject.startsWith('chore(release):'))
 }
 
-function bumpVersion(version: string, type: 'major' | 'minor' | 'patch'): string {
-  const parts = version.split('.').map(Number)
-  if (parts.length !== 3) return version
+function filesForCommit(hash: string): string[] {
+  return git(['show', '--pretty=format:', '--name-only', hash])
+    .split('\n')
+    .map(file => file.trim())
+    .filter(Boolean)
+}
+
+function commitsForPackage(pkg: WorkspacePackage, commits: CommitInfo[]): CommitInfo[] {
+  const packagePrefix = `${pkg.path}/`
+  return commits.filter(commit => commit.files.some(file => file === pkg.path || file.startsWith(packagePrefix)))
+}
+
+function parseCommit(commit: CommitInfo): ChangelogEntry {
+  const conventional = commit.subject.match(/^(\w+)(?:\(([^)]+)\))?(!)?:\s*(.+)$/)
+  const type = conventional?.[1]
+  const scope = conventional?.[2] ?? 'workspace'
+  const isBreaking = Boolean(conventional?.[3]) || commit.body.includes('BREAKING CHANGE')
+  const message = conventional?.[4] ?? commit.subject
+
+  if (isBreaking) {
+    return { group: 'breaking', bump: 'major', message, scope, commit: commit.shortHash }
+  }
 
   switch (type) {
-    case 'major':
-      parts[0]++
-      parts[1] = 0
-      parts[2] = 0
-      break
-    case 'minor':
-      parts[1]++
-      parts[2] = 0
-      break
-    case 'patch':
-      parts[2]++
-      break
+    case 'feat':
+      return { group: 'features', bump: 'minor', message, scope, commit: commit.shortHash }
+    case 'fix':
+      return { group: 'fixes', bump: 'patch', message, scope, commit: commit.shortHash }
+    case 'perf':
+      return { group: 'performance', bump: 'patch', message, scope, commit: commit.shortHash }
+    default:
+      return { group: 'other', bump: 'patch', message, scope, commit: commit.shortHash }
   }
-
-  return parts.join('.')
 }
 
-function generateChangelog(packageName: string, entries: ChangelogEntry[]): string {
-  const date = new Date().toISOString().split('T')[0]
-  let changelog = `# Changelog\n\n`
-  changelog += `## ${packageName}\n\n`
-  changelog += `### ${date}\n\n`
+function maxBump(entries: ChangelogEntry[]): BumpType {
+  if (entries.some(entry => entry.bump === 'major')) return 'major'
+  if (entries.some(entry => entry.bump === 'minor')) return 'minor'
+  if (entries.some(entry => entry.bump === 'patch')) return 'patch'
+  return 'none'
+}
 
-  if (entries.length === 0) {
-    changelog += `### Features\n- Initial release\n`
+function bumpVersion(version: string, bump: BumpType): string {
+  const parts = version.split('.').map(Number)
+  if (parts.length !== 3 || parts.some(Number.isNaN) || bump === 'none') return version
+
+  if (bump === 'major') return `${parts[0] + 1}.0.0`
+  if (bump === 'minor') return `${parts[0]}.${parts[1] + 1}.0`
+  return `${parts[0]}.${parts[1]}.${parts[2] + 1}`
+}
+
+function changelogSection(pkg: WorkspacePackage, release: PackageRelease): string {
+  const date = new Date().toISOString().slice(0, 10)
+  const lines = [`## ${release.nextVersion} - ${date}`, '']
+
+  const groups: Array<[ChangeGroup, string]> = [
+    ['breaking', 'Breaking Changes'],
+    ['features', 'Features'],
+    ['fixes', 'Bug Fixes'],
+    ['performance', 'Performance'],
+    ['other', 'Other Changes']
+  ]
+
+  for (const [group, title] of groups) {
+    const entries = release.entries.filter(entry => entry.group === group)
+    if (entries.length === 0) continue
+
+    lines.push(`### ${title}`)
+    for (const entry of entries) {
+      lines.push(`- ${entry.message} (${entry.scope}, ${entry.commit})`)
+    }
+    lines.push('')
+  }
+
+  if (release.entries.length === 0) {
+    lines.push(`- Initial release for ${pkg.name}.`, '')
+  }
+
+  return lines.join('\n')
+}
+
+function updateChangelog(pkg: WorkspacePackage, release: PackageRelease): void {
+  const header = `# Changelog\n\n`
+  const section = changelogSection(pkg, release)
+  const current = existsSync(pkg.changelogPath) ? readFileSync(pkg.changelogPath, 'utf-8') : header
+  const body = current.startsWith(header) ? current.slice(header.length) : current
+
+  writeFileSync(pkg.changelogPath, `${header}${section}${body.trim() ? `\n${body.trim()}\n` : ''}`)
+}
+
+function updatePackageVersion(pkg: WorkspacePackage, version: string): void {
+  const packageJson = readJson<Record<string, unknown>>(pkg.packageJsonPath)
+  packageJson.version = version
+  writeJson(pkg.packageJsonPath, packageJson)
+}
+
+function planReleases(): PackageRelease[] {
+  return discoverPackages().flatMap(pkg => {
+    const previousTag = latestTagFor(pkg)
+    const commits = commitsForPackage(pkg, commitsSince(previousTag))
+    const entries = commits.map(parseCommit)
+    const bump = maxBump(entries)
+
+    if (bump === 'none') return []
+
+    const nextVersion = bumpVersion(pkg.version, bump)
+    return [{
+      name: pkg.name,
+      path: pkg.path,
+      currentVersion: pkg.version,
+      nextVersion,
+      tag: `${pkg.tagPrefix}${nextVersion}`,
+      previousTag,
+      bump,
+      entries
+    }]
+  })
+}
+
+function writeGithubOutput(releases: PackageRelease[]): void {
+  const outputPath = process.env.GITHUB_OUTPUT
+  if (!outputPath) return
+
+  const changed = releases.length > 0 ? 'true' : 'false'
+  const packages = releases.map(release => release.name).join(',')
+  const tags = releases.map(release => release.tag).join(',')
+  writeFileSync(outputPath, `changed=${changed}\npackages=${packages}\ntags=${tags}\n`, { flag: 'a' })
+}
+
+function main(): void {
+  const releases = planReleases()
+
+  console.log('AI Workflow release plan')
+  console.log(`Root: ${rootDir}`)
+
+  if (releases.length === 0) {
+    console.log('No package changes found.')
+    writeJson(manifestPath, { changed: false, releases: [] })
+    writeGithubOutput([])
+    return
+  }
+
+  for (const release of releases) {
+    console.log(`- ${release.name}: ${release.currentVersion} -> ${release.nextVersion} (${release.bump})`)
+    console.log(`  tag: ${release.tag}`)
+    console.log(`  changes: ${release.entries.length}`)
+  }
+
+  if (!options.dryRun) {
+    const packages = discoverPackages()
+    for (const release of releases) {
+      const pkg = packages.find(item => item.name === release.name)
+      if (!pkg) continue
+
+      updateChangelog(pkg, release)
+      if (!options.changelogOnly) {
+        updatePackageVersion(pkg, release.nextVersion)
+      }
+    }
+  }
+
+  writeJson(manifestPath, { changed: true, releases })
+  writeGithubOutput(releases)
+
+  if (options.dryRun) {
+    console.log('Dry run completed without writing package files.')
+  } else if (options.changelogOnly) {
+    console.log('Changelogs updated.')
   } else {
-    const features = entries.filter(e => e.type === 'minor')
-    const fixes = entries.filter(e => e.type === 'patch')
-    const breaking = entries.filter(e => e.type === 'major')
-
-    if (breaking.length > 0) {
-      changelog += `### BREAKING CHANGES\n`
-      for (const entry of breaking) {
-        changelog += `- ${entry.message} (${entry.scope})\n`
-      }
-      changelog += `\n`
-    }
-
-    if (features.length > 0) {
-      changelog += `### Features\n`
-      for (const entry of features) {
-        changelog += `- ${entry.message} (${entry.scope})\n`
-      }
-      changelog += `\n`
-    }
-
-    if (fixes.length > 0) {
-      changelog += `### Bug Fixes\n`
-      for (const entry of fixes) {
-        changelog += `- ${entry.message} (${entry.scope})\n`
-      }
-      changelog += `\n`
-    }
-  }
-
-  return changelog
-}
-
-function updatePackageVersion(packagePath: string, newVersion: string): void {
-  const pkgPath = join(rootDir, packagePath, 'package.json')
-  const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'))
-  pkg.version = newVersion
-  writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n')
-  console.log(`  Updated ${pkg.name} to ${newVersion}`)
-}
-
-async function main() {
-  const args = process.argv.slice(2)
-  const changelogOnly = args.includes('--changelog')
-
-  console.log('🚀 AI Workflow Release Script\n')
-  console.log(`Root directory: ${rootDir}\n`)
-
-  for (const pkg of PACKAGES) {
-    console.log(`Processing ${pkg.name}...`)
-
-    const packageInfo = getPackageInfo(pkg.path)
-    if (!packageInfo) {
-      console.log(`  ⚠️  Package not found at ${pkg.path}`)
-      continue
-    }
-
-    console.log(`  Current version: ${packageInfo.version}`)
-
-    const entries = parseCommits(`v${packageInfo.version}`)
-    const changelog = generateChangelog(packageInfo.name, entries)
-
-    // Write changelog
-    const changelogPath = join(rootDir, pkg.path, 'CHANGELOG.md')
-    writeFileSync(changelogPath, changelog)
-    console.log(`  ✓ Generated CHANGELOG.md`)
-
-    if (!changelogOnly) {
-      const bumpType = determineBumpType(entries)
-      if (entries.length > 0) {
-        const newVersion = bumpVersion(packageInfo.version, bumpType)
-        updatePackageVersion(pkg.path, newVersion)
-        console.log(`  ✓ Bumped to ${newVersion} (${bumpType})`)
-      } else {
-        console.log(`  ⚠️  No commits since last release, skipping version bump`)
-      }
-    }
-
-    console.log('')
-  }
-
-  console.log('✅ Release process completed!')
-  if (changelogOnly) {
-    console.log('\n📝 Changelogs generated. Run `pnpm release` to also bump versions.')
-  } else {
-    console.log('\n📝 Run `git add . && git commit -m "chore: release"` and create a tag to publish.')
+    console.log('Release files updated.')
   }
 }
 
-main().catch(console.error)
+main()

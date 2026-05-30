@@ -56,13 +56,20 @@ importers:
         specifier: ^3.1.4
         version: 3.1.5(typescript@5.9.3)
 
-  packages/utils: {}
+  packages/utils:
+    devDependencies:
+      vite:
+        specifier: ^7.2.4
+        version: 7.2.4(@types/node@24.10.1)(tsx@4.21.0)
 
   playground:
     dependencies:
       '@ai-workflow/components':
         specifier: workspace:*
         version: link:../packages/components
+      '@vue/repl':
+        specifier: ^4.7.2
+        version: 4.7.2
       element-plus:
         specifier: ^2.14.0
         version: 2.14.0(vue@3.5.25(typescript@5.9.3))
@@ -1072,6 +1079,9 @@ packages:
 
   '@vue/reactivity@3.5.25':
     resolution: {integrity: sha512-5xfAypCQepv4Jog1U4zn8cZIcbKKFka3AgWHEFQeK65OW+Ys4XybP6z2kKgws4YB43KGpqp5D/K3go2UPPunLA==}
+
+  '@vue/repl@4.7.2':
+    resolution: {integrity: sha512-6x0hisEd5XRYxhLit3fvPCfeUfXEjB3a8Z2Pl3scVa3kZjck4+ERQF4XCahC7PTabWb3He04u+j8q3MK4WZHrQ==}
 
   '@vue/runtime-core@3.5.25':
     resolution: {integrity: sha512-Z751v203YWwYzy460bzsYQISDfPjHTl+6Zzwo/a3CsAf+0ccEjQ8c+0CdX1WsumRTHeywvyUFtW6KvNukT/smA==}
@@ -2478,6 +2488,8 @@ snapshots:
   '@vue/reactivity@3.5.25':
     dependencies:
       '@vue/shared': 3.5.25
+
+  '@vue/repl@4.7.2': {}
 
   '@vue/runtime-core@3.5.25':
     dependencies:

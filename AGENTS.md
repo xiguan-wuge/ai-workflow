@@ -98,3 +98,8 @@ docs/                       # VitePress 文档
 playground/                 # 开发测试应用
 scripts/                    # 构建/发布脚本
 ```
+
+## 文档路径规范
+
+- 在项目文档中引用文件路径时，仅使用仓库内相对路径（例如 `scripts/release.ts`）。
+- 不要写本机绝对路径（例如 `/Users/...`）。

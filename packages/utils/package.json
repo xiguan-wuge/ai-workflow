@@ -16,5 +16,8 @@
   ],
   "scripts": {
     "build": "vite build"
+  },
+  "devDependencies": {
+    "vite": "^7.2.4"
   }
 }

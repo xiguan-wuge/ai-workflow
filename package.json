@@ -12,6 +12,8 @@
     "docs:build": "pnpm --filter @ai-workflow/docs build",
     "docs:preview": "pnpm --filter @ai-workflow/docs preview",
     "release": "tsx scripts/release.ts",
+    "release:ci": "tsx scripts/release.ts --ci",
+    "release:dry-run": "tsx scripts/release.ts --dry-run",
     "changelog": "tsx scripts/release.ts --changelog"
   },
   "devDependencies": {
