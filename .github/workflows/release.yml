@@ -64,6 +64,37 @@ jobs:
         if: steps.release.outputs.changed == 'true'
         run: git push origin HEAD:${GITHUB_REF_NAME} --follow-tags
 
+      - name: Validate npm token format
+        if: steps.release.outputs.changed == 'true'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "NPM_TOKEN is empty or missing."
+            exit 1
+          fi
+
+          if printf '%s' "$NODE_AUTH_TOKEN" | grep -q '[[:space:]]'; then
+            echo "NPM_TOKEN contains whitespace characters."
+            exit 1
+          fi
+
+          case "$NODE_AUTH_TOKEN" in
+            npm_*) echo "NPM token format looks valid." ;;
+            *) echo "NPM_TOKEN does not look like an npm access token (expected prefix: npm_)." ; exit 1 ;;
+          esac
+
+      - name: Configure npm auth
+        if: steps.release.outputs.changed == 'true'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          cat > ~/.npmrc <<EOF
+          //registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}
+          registry=https://registry.npmjs.org/
+          always-auth=true
+          EOF
+
       - name: Publish changed packages to npm
         if: steps.release.outputs.changed == 'true'
         run: |
@@ -78,5 +109,3 @@ jobs:
             })
           }
           NODE
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
