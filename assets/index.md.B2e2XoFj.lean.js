@@ -1,1 +1,0 @@
-import{_ as a,c as i,b as l,ah as t}from"./chunks/framework.xnudLpZW.js";const c=JSON.parse('{"title":"AI Workflow 文档","description":"","frontmatter":{},"headers":[],"relativePath":"index.md","filePath":"index.md"}'),n={name:"index.md"};function e(h,s,p,k,r,o){return l(),i("div",null,[...s[0]||(s[0]=[t("",9)])])}const E=a(n,[["render",e]]);export{c as __pageData,E as default};
