@@ -7,6 +7,9 @@ on:
 permissions:
   issues: write
 
+env:
+  DOCS_URL: https://xiguan-wuge.github.io/ai-workflow/
+
 jobs:
   triage:
     runs-on: ubuntu-latest
@@ -45,6 +48,8 @@ jobs:
               labels: labels
             });
 
+            const docsUrl = process.env.DOCS_URL;
+
             const welcome = `Thanks for opening this issue, @${issue.user.login}!
 
             I've automatically applied the following labels: ${labels.map(l => '`' + l + '`').join(', ')}
@@ -56,7 +61,7 @@ jobs:
 
             For feature requests, please describe the use case and any alternatives you've considered.
 
-            Our documentation is available at https://xiguan-wuge.github.io/ai-workflow/`;
+            Our documentation is available at ${docsUrl}`;
 
             await github.rest.issues.createComment({
               owner: context.repo.owner,

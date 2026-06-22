@@ -6,7 +6,13 @@ import { fileURLToPath, URL } from 'node:url'
 export default defineConfig({
   title: 'AI Workflow',
   description: 'Vue 3 Component Library Documentation',
+  lang: 'en-US',
+  srcDir: '.',
   base: '/ai-workflow/',
+  cleanUrls: true,
+  sitemap: {
+    hostname: 'https://xiguan-wuge.github.io/ai-workflow/'
+  },
   markdown: {
     config(md) {
       md.use(mdContainer, 'demo', demoPlugin(md))

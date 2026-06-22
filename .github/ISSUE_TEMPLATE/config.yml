@@ -2,4 +2,4 @@ blank_issues_enabled: true
 contact_links:
   - name: Documentation
     url: https://xiguan-wuge.github.io/ai-workflow/
-    about: Check the documentation before opening an issue
+    about: Check the documentation site before opening an issue
