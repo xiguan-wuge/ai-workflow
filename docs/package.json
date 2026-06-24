@@ -12,7 +12,7 @@
     "@ai-workflow/components": "workspace:*",
     "@prettier/sync": "^0.6.1",
     "typescript": "~5.9.3",
-    "vue": "^3.5.24"
+    "vue": "^3.5.35"
   },
   "devDependencies": {
     "element-plus": "^2.14.0",
